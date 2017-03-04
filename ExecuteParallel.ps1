@@ -39,7 +39,7 @@ function Show-Menu
      
      Write-Host "1: Press '1' to execute HelloWorld action."
      Write-Host "2: Press '2' to execute Get_OSName action."
-     Write-Host "Q: Press 'Q' to quit."
+     Write-Host "Q: Press anything else to quit."
 }
 
 
@@ -50,10 +50,15 @@ switch ($input)
            '1' {
                 'You chose option #1'
                 $ScriptName = "helloworld"
-           } '2' {
+                }
+           '2' {
                 'You chose option #2'
                 $ScriptName = "get_win32_os_caption"
-           }
+                }
+           default {
+                'You chose to quit'
+                exit
+                }
      }
 
 $job = Execute-ParallellAcrossHosts -Computers $Computers -Credential $Credential -ScriptName $ScriptName -AsJob -ErrorAction SilentlyContinue
