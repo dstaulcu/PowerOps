@@ -1,13 +1,22 @@
 ﻿workflow Execute-ParallellAcrossHosts {
     param(
         [string[]] $Computers,
-        [PSCredential] $Credential
+        [PSCredential] $Credential,
+        [string[]] $ScriptName
     )
-
-    foreach -parallel ($Computer in $Computers) {
-
-        InlineScript { C:\Users\David\Documents\Development\projects\PowerOps\catalog\helloworld.ps1 } -PSComputerName $Computer -PSCredential $Credential
+    
+    if ($ScriptName -eq "HelloWorld") {
+        foreach -parallel ($Computer in $Computers) {
+           InlineScript {C:\Users\David\Documents\Development\projects\PowerOps\catalog\helloworld.ps1} -PSComputerName $Computer -PSCredential $Credential
+        }
     }
+
+    if ($ScriptName -eq "get_win32_os_caption") {
+        foreach -parallel ($Computer in $Computers) {
+           InlineScript {C:\Users\David\Documents\Development\projects\PowerOps\catalog\get_win32_os_caption.ps1} -PSComputerName $Computer -PSCredential $Credential
+        }
+    }
+
 }
 
 if (!($Credential)) {
@@ -20,8 +29,36 @@ $JobExecutionEventTime = Get-Date -format "yyyyMMddHHmmss"
 $ResultFile = "$env:TEMP\Results_$JobExecutionEventTime.csv"
 $Computers = @("Mobile-PC","Mobile-PC","Mobile-PC","Mobile-PC","Mobile-PC","Mobile-PC","Mobile-PC","Mobile-PC","Mobile-PC","Mobile-PC")
 
-$job = Execute-ParallellAcrossHosts -Computers $Computers -Credential $Credential -AsJob -ErrorAction SilentlyContinue
+function Show-Menu
+{
+     param (
+           [string]$Title = 'My Menu'
+     )
+     cls
+     Write-Host "================ $Title ================"
+     
+     Write-Host "1: Press '1' to execute HelloWorld action."
+     Write-Host "2: Press '2' to execute Get_OSName action."
+     Write-Host "Q: Press 'Q' to quit."
+}
 
+
+Show-Menu -Title "Select PowerAction to Execute"
+$input = Read-Host "Please make a selection"
+switch ($input)
+     {
+           '1' {
+                cls
+                'You chose option #1'
+                $ScriptName = "helloworld"
+           } '2' {
+                cls
+                'You chose option #2'
+                $ScriptName = "get_win32_os_caption"
+           }
+     }
+
+$job = Execute-ParallellAcrossHosts -Computers $Computers -Credential $Credential -ScriptName $ScriptName -AsJob -ErrorAction SilentlyContinue
 
 
 do {
