@@ -48,11 +48,9 @@ $input = Read-Host "Please make a selection"
 switch ($input)
      {
            '1' {
-                cls
                 'You chose option #1'
                 $ScriptName = "helloworld"
            } '2' {
-                cls
                 'You chose option #2'
                 $ScriptName = "get_win32_os_caption"
            }
