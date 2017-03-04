@@ -2,19 +2,11 @@
     param(
         [string[]] $Computers,
         [PSCredential] $Credential,
-        [string[]] $ScriptName
+        [string[]] $ScriptPath
     )
-    
-    if ($ScriptName -eq "HelloWorld") {
-        foreach -parallel ($Computer in $Computers) {
-           InlineScript {C:\Users\David\Documents\Development\projects\PowerOps\catalog\helloworld.ps1} -PSComputerName $Computer -PSCredential $Credential
-        }
-    }
-
-    if ($ScriptName -eq "get_win32_os_caption") {
-        foreach -parallel ($Computer in $Computers) {
-           InlineScript {C:\Users\David\Documents\Development\projects\PowerOps\catalog\get_win32_os_caption.ps1} -PSComputerName $Computer -PSCredential $Credential
-        }
+ 
+    foreach -parallel ($Computer in $Computers) {
+        InlineScript {& $Using:ScriptPath}
     }
 
 }
@@ -29,40 +21,36 @@ $JobExecutionEventTime = Get-Date -format "yyyyMMddHHmmss"
 $ResultFile = "$env:TEMP\Results_$JobExecutionEventTime.csv"
 $Computers = @("Mobile-PC","Mobile-PC","Mobile-PC","Mobile-PC","Mobile-PC","Mobile-PC","Mobile-PC","Mobile-PC","Mobile-PC","Mobile-PC")
 
+$CatalogPath = "C:\Users\David\Documents\Development\projects\PowerOps\catalog"
+$CatalogScripts = Get-ChildItem $CatalogPath -Filter "*.ps1" 
+
 function Show-Menu
 {
      param (
            [string]$Title = 'My Menu'
      )
+     $menuItemCount=0
      cls
      Write-Host "================ $Title ================"
-     
-     Write-Host "1: Press '1' to execute HelloWorld action."
-     Write-Host "2: Press '2' to execute Get_OSName action."
-     Write-Host "Q: Press anything else to quit."
+
+     foreach ($CatalogScript in $CatalogScripts) {
+
+        Write-Host "Press $menuItemCount to execute $CatalogScript.Name."
+        ++$menuItemCount
+     }
+    Write-Host "Q: Press anything else to quit."
 }
 
 
 Show-Menu -Title "Select PowerAction to Execute"
 $input = Read-Host "Please make a selection"
-switch ($input)
-     {
-           '1' {
-                'You chose option #1'
-                $ScriptName = "helloworld"
-                }
-           '2' {
-                'You chose option #2'
-                $ScriptName = "get_win32_os_caption"
-                }
-           default {
-                'You chose to quit'
-                exit
-                }
-     }
 
-$job = Execute-ParallellAcrossHosts -Computers $Computers -Credential $Credential -ScriptName $ScriptName -AsJob -ErrorAction SilentlyContinue
+if (!(($input -ge 0) -and ($input -le $CatalogScripts.Count))) {
+    write-host "$input selected, exiting."
+    exit    
+} 
 
+$job = Execute-ParallellAcrossHosts -Computers $Computers -Credential $Credential -ScriptPath $CatalogScripts[$input].FullName -AsJob -ErrorAction SilentlyContinue
 
 do {
     $counter++
