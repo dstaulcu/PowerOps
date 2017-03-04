@@ -16,9 +16,7 @@
                 "$EventTime;$env:computername;$Message"
             }
 
-            $rando = Get-Random(3)
-            sleep($rando)
-            Print-FomattedEvent("Done sleeping after $rando seconds.")
+            Print-FomattedEvent("Hello world!")
 
 
         } -PSComputerName $Computer -PSCredential $Credential
@@ -29,12 +27,15 @@ if (!($Credential)) {
     $Credential = Get-Credential -UserName "$env:computername\$env:USERNAME" -Message "Enter credential having network/admin access on target computers"
 }
 
-$Computers = @("Mobile-PC","Mobile-PC","Mobile-PC","Mobile-PC","Mobile-PC","Mobile-PC","Mobile-PC","Mobile-PC","Mobile-PC","Mobile-PC","Mobile-PC","Mobile-PC","Mobile-PC","Mobile-PC","Mobile-PC","Mobile-PC","Mobile-PC","Mobile-PC","Mobile-PC","Mobile-PC","Mobile-PC","Mobile-PC","Mobile-PC","Mobile-PC","Mobile-PC","Mobile-PC","Mobile-PC","Mobile-PC","Mobile-PC","Mobile-PC","Mobile-PC","Mobile-PC","Mobile-PC","Mobile-PC","Mobile-PC","Mobile-PC")
+$counter=0
+$Results=@()
+$JobExecutionEventTime = Get-Date -format "yyyyMMddHHmmss"
+$ResultFile = "$env:TEMP\Results_$JobExecutionEventTime.csv"
+$Computers = @("Mobile-PC","Mobile-PC","Mobile-PC","Mobile-PC","Mobile-PC","Mobile-PC","Mobile-PC","Mobile-PC","Mobile-PC","Mobile-PC")
 
 $job = Execute-ParallellAcrossHosts -Computers $Computers -Credential $Credential -AsJob -ErrorAction SilentlyContinue
 
-$counter=0
-$Results=@()
+
 
 do {
     $counter++
@@ -51,8 +52,9 @@ do {
 
 } until ($job.State -eq "Completed")
 
-$results | Export-Csv -Encoding ASCII -Force -NoTypeInformation -path "$env:TEMP\Results.csv"
+
+$results | Export-Csv -Encoding ASCII -Force -NoTypeInformation -path $ResultFile
 
 Remove-Job $job
 
-$Results | Out-GridView
+Import-Csv -Path $ResultFile | Out-GridView -Title "$ResultFile"
