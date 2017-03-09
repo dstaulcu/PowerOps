@@ -35,31 +35,182 @@ function Execute-ParallellAcrossHosts {
     return $Results
 }
 
-function Show-Menu
+function Show-Menu-Catalog
 {
-     param (
-           [string]$Title = 'My Menu'
-     )
-     $menuItemCount=0
-     cls
-     Write-Host "================ $Title ================"
+    param (
+        [string]$Title = 'My Menu'
+    )
+    $menuItemCount=0
+    cls
+    if ($Computers) {
+        write-host 'The selected action will target' $Computers.count 'computer(s).'
+        Write-Host
+    } else {
+        #say nothing!
+    }
+    Write-Host "================ $Title ================"
+    Write-Host
 
-     foreach ($CatalogScript in $CatalogScripts) {
+    foreach ($CatalogScript in $CatalogScripts) {
 
         Write-Host "Enter '$menuItemCount' to execute $CatalogScript"
         ++$menuItemCount
-     }
+    }
+    Write-Host 
     Write-Host "Enter anything else to exit"
     write-host 
 }
 
+function Show-Menu-Targets
+{
+    param (
+        [string]$Title = 'My Menu'
+    )
+    cls
+    Write-Host "================ $Title ================"
+    Write-Host
+    Write-Host "Enter '0' to input computer names manually"
+    Write-Host "Enter '1' to import computer names from a txt file"
+    Write-Host "Enter '2' to reuse current value of the `$computers array"
+    Write-Host "Enter '3' to include computers with specified results from `$computers array"
+    Write-Host "Enter '4' to exclude computers with specified results from `$computers array"
+    Write-Host 
+    Write-Host "Enter anything else to exit"
+    write-host 
+}
+
+function Show-Menu-Results
+{
+    param (
+        [string]$Title = 'My Menu'
+    )
+    $menuItemCount = 0
+    cls
+    Write-Host "================ $Title ================"
+    Write-Host
+    foreach ($Result in $ResultSummary) {
+
+        Write-Host "Enter '$menuItemCount' to filter on '$($Result.Name)'"
+        ++$menuItemCount
+    }
+    Write-Host 
+    Write-Host "Enter anything else to exit"
+    write-host 
+}
+
+
 <####################################################################
 ###### MAIN #########################################################
-####################################################################>
+#################################################################0###>
 
-# Array of Computers to target, if not already defined on previous run
-if (!($Computers)) {
-    $Computers = @("Mobile-pc","Win7X64","WinSRV2016STD","SomeOfflineHost")
+# present a menu of input options for array of computers to target
+Show-Menu-Targets -Title "Select method to identify computers to target"
+$input_targets = Read-Host "Please make a selection"
+if (!(($input_targets -ge 0) -and ($input_targets -le 4))) {
+    write-host "$input_targets entered, exiting."
+    exit    
+} 
+
+# handle condition where manual input menu item was selected
+if ($input_targets -eq 0) {
+    [void][Reflection.Assembly]::LoadWithPartialName('Microsoft.VisualBasic')
+    $title = 'PowerOps'
+    $msg   = 'Enter target computer(s) (eg. wks1, wks2, etc.):'
+
+    $text = [Microsoft.VisualBasic.Interaction]::InputBox($msg, $title)
+    if (!($text)) {
+        write-host "User cancelled the form!"
+        exit
+    } else {
+        $Computers=@()
+        if ($text -match ",") {
+            $text = $text.Split(",")
+            foreach ($item in $text) {
+                $item.trim()
+                $Computers += $item
+            }
+
+        } else {
+            $computers = $text.Trim()
+        }
+
+    }
+}
+
+# handle condition where txt file input menu item was selected
+if ($input_targets -eq 1) {
+    $fd = New-Object system.windows.forms.openfiledialog
+    $fd.InitialDirectory = ($MyInvocation.MyCommand.path).replace($MyInvocation.MyCommand.Name,"")
+    $fd.MultiSelect = $false
+    $fd.Filter = "TXT (*.txt)| *.txt"
+    $fd.showdialog()
+    $fd.filenames
+
+    if (!($fd.FileName)) {
+        "operation was cancelled, exiting."
+        exit
+    } else {
+        $computers = Get-Content -Path $fd.FileName
+    }
+}
+
+# handle condition where re-use menu item was selected
+if ($input_targets -eq 2) {
+    if (!($Computers)) {
+        write-host "computers array does not yet exist for reuse, exiting"
+        exit
+    }    
+}
+
+# handle condition where include filter menu item was selected
+if ($input_targets -eq 3) {
+    cls
+    if (!($Computers)) {
+        write-host "computers array does not yet exist for reuse, exiting"
+        exit
+    }
+    if (!($Results)) {
+        write-host "results array does not yet exist for reuse, exiting"
+        exit
+    }
+    $ResultSummary = $Results | Group-Object -Property result | Sort-Object Count -Descending | Select-Object -First 10 -Property Count, Name
+    Show-Menu-Results -Title "Select result you want want to INCLUDE"
+    $input_results = Read-Host "Please make a selection"
+    if (!($input_results -ge 0) -and ($input_results -le $ResultSummary.count)) {
+        write-host "$input_targets entered, exiting."
+        exit
+    }            
+    $Computers = $results | where-object {$_.Result -like "*$($ResultSummary[$input_results].Name)*"} | Select-Object -ExpandProperty Computer
+}
+
+# handle condition where exclude menu item was selected
+if ($input_targets -eq 4) {
+    cls
+    if (!($Computers)) {
+        write-host "computers array does not yet exist for reuse, exiting"
+        exit
+    }
+    if (!($Results)) {
+        write-host "results array does not yet exist for reuse, exiting"
+        exit
+    }
+    $ResultSummary = $Results | Group-Object -Property result | Sort-Object Count -Descending | Select-Object -First 10 -Property Count, Name
+    Show-Menu-Results -Title "Select result you want want to EXCLUDE"
+    $input_results = Read-Host "Please make a selection"
+    if (!($input_results -ge 0) -and ($input_results -le $ResultSummary.count)) {
+        write-host "$input_targets entered, exiting."
+        exit
+    }            
+    $Computers = $results | where-object {$_.Result -notlike "*$($ResultSummary[$input_results].Name)*"} | Select-Object -ExpandProperty Computer
+    if (!($input_results -ge 0) -and ($input_results -le $ResultSummary.count)) {
+        write-host "$input_targets entered, exiting."
+        exit
+    }            
+    if (!($Computers)) {
+        write-host "computers array is now empty, exiting"
+        exit
+    }
+
 }
 
 # verify catalog folder is where expected (same folder as script)
@@ -71,14 +222,14 @@ if (!(Test-Path -Path $CatalogPath)) {
 
 # Get credential from admin if not already provided in previous session
 if (!($Credential)) {
-    $Credential = Get-Credential -UserName "$env:userdomain\$env:username" -Message "Enter credential having network/admin access on target computers"
+    $Credential = Get-Credential -UserName "Administrator" -Message "Enter credential having network/admin access on target computers"
 }
 
 # Get list of scripts in catalog file
 $CatalogScripts = Get-ChildItem $CatalogPath -Filter "*.ps1" 
 
 # present a menu of scripts that user could choose to execute
-Show-Menu -Title "Select Script Catalog Item to Execute"
+Show-Menu-Catalog -Title "Select Script Catalog Item to Execute"
 $input = Read-Host "Please make a selection"
 if (!(($input -ge 0) -and ($input -le $CatalogScripts.Count))) {
     write-host "$input selected, exiting."
@@ -101,9 +252,22 @@ $Results | Export-Csv -Encoding ASCII -Force -NoTypeInformation -path $ResultFil
 Import-Csv -Path $ResultFile | Out-GridView -Title "$ResultFile"
 
 <####################################################################
-###### POST-PROCESS FUN #############################################
+###### POST-PROCESSING BEGIN ########################################
 #####################################################################
 
+#####################################################################
+###### RESET CONTROL VALUES (COMPUTERS/CREDENTIALS)
+$Computers = out-null
+$Credential = out-null
+
+#####################################################################
+###### FILTER COMPUTERS ARRAY TO INCLUDE ONLY FILTERED RESULTS
 $Computers = $Results | Where-Object {$_.Result -like "*Windows 7*"} | Select-Object -ExpandProperty Computer
 
+#####################################################################
+###### NEXT CLEVER IDEA
+
+
+#####################################################################
+###### POST-PROCESSING END ##########################################
 ####################################################################>
