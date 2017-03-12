@@ -9,15 +9,15 @@ function Print-FomattedEvent {
 function GetLogonStatus  {
     try {
         $user = $null
-        $user = gwmi -Class win32_computersystem -ComputerName $computer | select -ExpandProperty username -ErrorAction Stop
+        $user = gwmi -Class win32_computersystem | select -ExpandProperty username -ErrorAction Stop
         }
     catch { "Not logged on"; return }
     try {
-        if ((Get-Process logonui -ComputerName $computer -ErrorAction Stop) -and ($user)) {
+        if ((Get-Process logonui -ErrorAction Stop) -and ($user)) {
             "Workstation locked by $user"
             }
         }
     catch { if ($user) { "$user logged on" } }
 }
 
-Print-FomattedEvent(GetRemoteLogonStatus)
+Print-FomattedEvent(GetLogonStatus)
