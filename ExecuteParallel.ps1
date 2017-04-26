@@ -30,7 +30,8 @@ function Execute-ParallellAcrossHosts {
             $Results += $CustomEvent 
         }
         # print current status of job for nervous|impatient|reward-driven users
-        write-host ('Results received from ' + $Results.count + ' of ' + $Computers.count + ' targeted computers after ' + $counter + ' seconds.')  
+#        write-host ('Results received from ' + $Results.count + ' of ' + $Computers.count + ' targeted computers after ' + $counter + ' seconds.') 
+        Write-Progress -activity "Execution of $($scriptname) job has taken $($counter) seconds." -status "Results received from $($Results.count) of $($computers.count) hosts." -PercentComplete $(($Results.count/$computers.count)*100)
     } until (($job.State -eq "Completed" -or $job.State -eq "Failed"))
     Remove-Job $job
     return $Results
@@ -73,7 +74,7 @@ function Show-Menu-Catalog
         $btn.Location = New-Object System.Drawing.Size($btnlocX,$btnlocY)
         $btn.Size = New-Object Drawing.Size($btnMaxLengthX,20)
         $btn.Text = $CatalogScript.name
-        if ($catalogscript.Name -like "set*") { $btn.ForeColor = [System.Drawing.Color]::Red }
+        if (($catalogscript.Name -like "set-*") -or ($catalogscript.Name -like "remove-*")) { $btn.ForeColor = [System.Drawing.Color]::Red }
         $btn.Add_Click({Button_Click})
         $form.Controls.Add($btn)
         $btnlocX += 0
@@ -243,7 +244,7 @@ if (!(Test-Path -Path $CatalogPath)) {
 
 # Get credential from admin if not already provided in previous session
 if (!($Credential)) {
-    $Credential = Get-Credential -UserName "Administrator" -Message "Enter credential having network/admin access on target computers"
+    $Credential = Get-Credential -UserName "$($env:username)" -Message "Enter credential having network/admin access on target computers"
 }
 
 # Get list of scripts in catalog file
